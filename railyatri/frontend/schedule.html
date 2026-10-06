@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RailYatri - Train Schedule</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+        th, td { text-align: left; padding: 10px 5px; border-bottom: 1px solid var(--border-color); }
+        th { color: var(--text-muted); font-weight: normal; }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <a href="index.html" class="back-btn">←</a>
+            <h1>Train Schedule</h1>
+            <div style="width: 24px;"></div>
+        </header>
+
+        <div class="card" style="margin-top: 20px;">
+            <div class="d-flex">
+                <input type="text" id="trainInput" class="form-control" placeholder="Train Number or Name" style="border-radius: 8px 0 0 8px;">
+                <button class="btn btn-primary" style="border-radius: 0 8px 8px 0; width: 100px;" onclick="checkSchedule()">Search</button>
+            </div>
+        </div>
+
+        <div id="scheduleResult" style="display: none; padding-bottom: 20px;">
+            <!-- Result loaded here via JS -->
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        async function checkSchedule() {
+            const trainNo = document.getElementById('trainInput').value.trim();
+            if(!trainNo) return;
+
+            const resultContainer = document.getElementById('scheduleResult');
+            resultContainer.style.display = 'block';
+            resultContainer.innerHTML = '<div class="text-center text-muted mt-4">Fetching schedule...</div>';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/trains/${trainNo}/schedule`);
+                const train = await response.json();
+                
+                if(!train || !train.trainNumber) throw new Error("Train not found");
+
+                let tbody = '';
+                train.schedule.forEach(st => {
+                    tbody += `
+                        <tr>
+                            <td>
+                                <div class="fw-bold text-dark">${st.code}</div>
+                                <div class="text-muted" style="font-size: 0.7rem;">${st.name}</div>
+                            </td>
+                            <td>${st.arrivalTime}</td>
+                            <td>${st.departureTime}</td>
+                            <td>${st.halt}</td>
+                            <td>${st.distance} km</td>
+                        </tr>
+                    `;
+                });
+
+                resultContainer.innerHTML = `
+                    <div class="card">
+                        <div class="fw-bold mb-1" style="font-size: 1.1rem;">${train.trainNumber} ${train.trainName}</div>
+                        <div class="text-muted mb-3" style="font-size: 0.85rem;">${train.source} → ${train.destination}</div>
+                        <div style="overflow-x: auto;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Station</th>
+                                        <th>Arr.</th>
+                                        <th>Dep.</th>
+                                        <th>Halt</th>
+                                        <th>Dist.</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${tbody}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+
+            } catch (error) {
+                resultContainer.innerHTML = `
+                    <div class="card text-center text-danger">Train not found. Try 12951 or 12903.</div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

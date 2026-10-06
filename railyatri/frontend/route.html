@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RailYatri - Connecting Route</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .connecting-line {
+            position: absolute;
+            left: 28px;
+            top: 30px;
+            bottom: 30px;
+            width: 2px;
+            background-color: var(--border-color);
+            z-index: 1;
+        }
+        .route-item {
+            position: relative;
+            z-index: 2;
+            background: var(--secondary-color);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <a href="javascript:history.back()" class="back-btn">←</a>
+            <h1>Connecting Route</h1>
+            <div style="width: 24px;"></div>
+        </header>
+
+        <div class="card text-center" style="margin-top: 20px;">
+            <div style="font-size: 3rem; color: var(--danger-color); margin-bottom: 10px;">🚫🚆</div>
+            <h3>No Direct Train Available</h3>
+            <p class="text-muted" style="font-size: 0.85rem;">Your selected route does not have a direct train. We found a connecting route for you.</p>
+            <div class="fw-bold mt-2">Mumbai → Ahmedabad → Delhi</div>
+        </div>
+
+        <div style="position: relative; padding: 15px;">
+            <div class="connecting-line"></div>
+            
+            <div class="route-item d-flex">
+                <div style="width: 30px; text-align: center; color: var(--primary-color);">❶</div>
+                <div style="flex-grow: 1; padding-left: 10px;">
+                    <div class="fw-bold" style="font-size: 0.9rem;">Train 1: 12951 Rajdhani Express</div>
+                    <div class="text-muted" style="font-size: 0.8rem;">MMCT → BRC (Ahmedabad/Vadodara via)</div>
+                    <div class="d-flex justify-content-between mt-2" style="font-size: 0.85rem;">
+                        <span class="fw-bold">16:55</span>
+                        <span class="text-muted">→ 12h 25m →</span>
+                        <span class="fw-bold">05:20</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="route-item d-flex">
+                <div style="width: 30px; text-align: center; color: var(--primary-color);">❷</div>
+                <div style="flex-grow: 1; padding-left: 10px;">
+                    <div class="fw-bold" style="font-size: 0.9rem;">Train 2: 12960 Gujarat Express</div>
+                    <div class="text-muted" style="font-size: 0.8rem;">BRC → NDLS (Delhi)</div>
+                    <div class="d-flex justify-content-between mt-2" style="font-size: 0.85rem;">
+                        <span class="fw-bold">08:15</span>
+                        <span class="text-muted">→ 14h 25m →</span>
+                        <span class="fw-bold">22:40</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card" style="margin: 0;">
+                <div class="text-center">
+                    <div class="text-muted" style="font-size: 0.85rem;">Estimated Total Journey Time</div>
+                    <div class="fw-bold" style="font-size: 1.1rem; color: var(--primary-color);">1 Day 4 Hours 50 Minutes</div>
+                </div>
+                <button class="btn btn-primary mt-3" onclick="selectRoute()">Select Route</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        function selectRoute() {
+            // For simplicity in this demo, just pick the first train for booking
+            localStorage.setItem('selected_train', '12951');
+            localStorage.setItem('is_connecting', 'true');
+            window.location.href = 'passenger.html';
+        }
+    </script>
+</body>
+</html>

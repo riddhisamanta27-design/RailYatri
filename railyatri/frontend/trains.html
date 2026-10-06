@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RailYatri - Train Results</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .train-card {
+            border-left: 4px solid var(--primary-color);
+        }
+        .train-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+        }
+        .class-badge {
+            font-size: 0.75rem;
+            padding: 4px 8px;
+            border-radius: 4px;
+            background-color: var(--bg-light);
+            margin-right: 5px;
+            display: inline-block;
+        }
+        .class-badge.available {
+            color: var(--success-color);
+            border: 1px solid var(--success-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <a href="index.html" class="back-btn">←</a>
+            <div class="text-center" style="flex-grow: 1;">
+                <h1 id="routeHeader">Trains</h1>
+                <div style="font-size: 0.7rem;" id="dateSubHeader"></div>
+            </div>
+            <div style="width: 24px;"></div> <!-- Spacer for flex balance -->
+        </header>
+
+        <div id="resultsContainer" style="padding-bottom: 20px;">
+            <!-- Train Results will be loaded here via JS -->
+            <div class="text-center mt-4 text-muted" id="loadingState">Loading trains...</div>
+        </div>
+
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const src = getQueryParam('source') || localStorage.getItem('search_src');
+            const dest = getQueryParam('destination') || localStorage.getItem('search_dest');
+            const date = localStorage.getItem('search_date');
+
+            if(src && dest) {
+                document.getElementById('routeHeader').textContent = `${src.toUpperCase()} → ${dest.toUpperCase()}`;
+                document.getElementById('dateSubHeader').textContent = new Date(date).toDateString();
+                fetchTrains(src, dest);
+            } else {
+                window.location.href = 'index.html';
+            }
+        });
+
+        async function fetchTrains(src, dest) {
+            try {
+                // For simplicity, fetch all and filter client side OR use the search API endpoint
+                // Let's use the search API
+                let url = `${API_BASE_URL}/trains/search?source=${src}&destination=${dest}`;
+                
+                const response = await fetch(url);
+                const trains = await response.json();
+                
+                const container = document.getElementById('resultsContainer');
+                
+                if(trains.length === 0) {
+                    // Try connecting routes
+                    let connUrl = `${API_BASE_URL}/trains/search-connecting?source=${src}&destination=${dest}`;
+                    const connResponse = await fetch(connUrl);
+                    const connections = await connResponse.json();
+                    
+                    if (connections.length === 0) {
+                        container.innerHTML = `
+                            <div class="card text-center mt-4">
+                                <h3>No Trains Available</h3>
+                                <p class="text-muted mt-2">Your selected route does not have direct or connecting trains.</p>
+                            </div>
+                        `;
+                    } else {
+                        let html = `
+                            <div class="card text-center mt-4" style="border: 1px solid orange;">
+                                <h3>No Direct Train Available</h3>
+                                <p class="text-muted mt-2">Suggested Connecting Routes</p>
+                            </div>
+                        `;
+                        connections.forEach((route, idx) => {
+                            let train1 = route[0];
+                            let train2 = route[1];
+                            html += `
+                                <div class="card train-card mt-3">
+                                    <div class="fw-bold mb-2">Connecting Option ${idx + 1}</div>
+                                    <div class="text-muted mb-2" style="font-size: 0.85rem;">Change at: <span class="fw-bold text-dark">${train1.destination}</span></div>
+                                    
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <div style="width: 45%;">
+                                            <div style="font-size: 0.8rem; background: #e9ecef; padding: 2px 5px; border-radius: 4px; display: inline-block;">Leg 1</div>
+                                            <div class="fw-bold mt-1">${train1.trainNumber}</div>
+                                            <div style="font-size: 0.75rem;">${train1.source} → ${train1.destination}</div>
+                                            <div class="text-success fw-bold" style="font-size: 0.8rem;">Dep: ${train1.departureTime}</div>
+                                        </div>
+                                        <div style="width: 45%;">
+                                            <div style="font-size: 0.8rem; background: #e9ecef; padding: 2px 5px; border-radius: 4px; display: inline-block;">Leg 2</div>
+                                            <div class="fw-bold mt-1">${train2.trainNumber}</div>
+                                            <div style="font-size: 0.75rem;">${train2.source} → ${train2.destination}</div>
+                                            <div class="text-success fw-bold" style="font-size: 0.8rem;">Dep: ${train2.departureTime}</div>
+                                        </div>
+                                    </div>
+                                    <button class="btn btn-outline w-100 mt-2" onclick="viewDetails('${train1.trainNumber}')">View Details (Leg 1)</button>
+                                </div>
+                            `;
+                        });
+                        container.innerHTML = html;
+                    }
+                    return;
+                }
+
+                let html = `<div style="padding: 10px 20px; font-size: 0.85rem; font-weight: bold;">${trains.length} Direct Trains Found</div>`;
+                
+                trains.forEach(train => {
+                    let classesHtml = '';
+                    if (train.classes) {
+                        train.classes.forEach(cls => {
+                            let statusColor = "var(--success-color)";
+                            let statusText = "Available " + cls.availableSeats;
+                            if (cls.status === "RAC") {
+                                statusColor = "orange";
+                                statusText = "RAC " + cls.currentRac;
+                            } else if (cls.status === "WAITING") {
+                                statusColor = "red";
+                                statusText = "WL " + cls.currentWaitingList;
+                            }
+
+                            classesHtml += `<span class="class-badge" style="color: ${statusColor}; border: 1px solid ${statusColor}; margin-bottom: 5px;">${cls.className}: ${statusText}</span>`;
+                        });
+                    }
+
+                    html += `
+                        <div class="card train-card">
+                            <div class="train-header">
+                                <div>
+                                    <span class="fw-bold">${train.trainNumber}</span>
+                                    <span style="margin-left: 5px;">${train.trainName}</span>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-between mt-2 mb-3">
+                                <div class="text-center">
+                                    <div class="fw-bold text-success">${train.departureTime}</div>
+                                    <div style="font-size: 0.8rem;" class="text-muted">${train.source}</div>
+                                </div>
+                                <div class="text-center text-muted" style="font-size: 0.8rem; align-self: center;">
+                                    <div>--- ${train.duration} ---</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="fw-bold">${train.arrivalTime}</div>
+                                    <div style="font-size: 0.8rem;" class="text-muted">${train.destination}</div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                ${classesHtml}
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <button class="btn btn-outline" style="width: 48%; padding: 8px;" onclick="viewDetails('${train.trainNumber}')">View Details</button>
+                                <button class="btn btn-primary" style="width: 48%; padding: 8px;" onclick="selectTrain('${train.trainNumber}')">Select</button>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                container.innerHTML = html;
+
+            } catch (error) {
+                console.error("Error fetching trains:", error);
+                document.getElementById('resultsContainer').innerHTML = `
+                    <div class="card text-center mt-4">
+                        <p class="text-danger">Error fetching trains. Please make sure backend is running.</p>
+                    </div>
+                `;
+            }
+        }
+
+        function viewDetails(trainNo) {
+            window.location.href = `train-details.html?trainNo=${trainNo}`;
+        }
+
+        function selectTrain(trainNo) {
+            localStorage.setItem('selected_train', trainNo);
+            window.location.href = 'passenger.html';
+        }
+    </script>
+</body>
+</html>

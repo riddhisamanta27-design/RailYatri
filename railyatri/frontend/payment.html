@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RailYatri - Payment</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .stepper {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px;
+            background: var(--secondary-color);
+            margin-bottom: 15px;
+            position: relative;
+        }
+        .step {
+            text-align: center;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            position: relative;
+            z-index: 2;
+            background: var(--secondary-color);
+            padding: 0 5px;
+        }
+        .step.active {
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+        .step.completed .step-circle {
+            background: var(--success-color);
+            color: white;
+        }
+        .step-circle {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #eee;
+            margin: 0 auto 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .step.active .step-circle {
+            background: var(--primary-color);
+            color: white;
+        }
+        .stepper-line {
+            position: absolute;
+            top: 25px;
+            left: 30px;
+            right: 30px;
+            height: 2px;
+            background: #eee;
+            z-index: 1;
+        }
+        .fare-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+        }
+        .fare-total {
+            border-top: 1px dashed var(--border-color);
+            padding-top: 10px;
+            margin-top: 10px;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+        .payment-method {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+        .payment-method.selected {
+            border-color: var(--primary-color);
+            background-color: #f0f7ff;
+        }
+        .payment-method input {
+            margin-right: 15px;
+        }
+        /* Loader */
+        #loaderOverlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.9);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        .spinner {
+            border: 4px solid rgba(0,0,0,0.1);
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            border-left-color: var(--primary-color);
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div id="loaderOverlay">
+        <div class="spinner"></div>
+        <div class="mt-3 fw-bold" style="color: var(--primary-color);">Processing Payment...</div>
+    </div>
+
+    <div class="app-container">
+        <header class="app-header">
+            <a href="javascript:history.back()" class="back-btn">←</a>
+            <h1>Payment</h1>
+            <div style="width: 24px;"></div>
+        </header>
+
+        <div class="stepper">
+            <div class="stepper-line"></div>
+            <div class="step completed">
+                <div class="step-circle">✓</div>
+                Passenger
+            </div>
+            <div class="step active">
+                <div class="step-circle">2</div>
+                Payment
+            </div>
+            <div class="step">
+                <div class="step-circle">3</div>
+                Confirm
+            </div>
+        </div>
+
+        <div class="card" id="summaryCard">
+            <!-- Loaded via JS -->
+        </div>
+
+        <div class="card">
+            <h3 style="font-size: 1rem; margin-bottom: 15px;">Fare Breakdown</h3>
+            <div class="fare-row">
+                <span class="text-muted">Base Fare</span>
+                <span id="baseFare">₹ 0</span>
+            </div>
+            <div class="fare-row">
+                <span class="text-muted">Reservation Charge</span>
+                <span>₹ 40</span>
+            </div>
+            <div class="fare-row">
+                <span class="text-muted">GST (5%)</span>
+                <span id="gst">₹ 0</span>
+            </div>
+            <div class="fare-row fare-total">
+                <span>Total Fare</span>
+                <span id="totalFare">₹ 0</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3 style="font-size: 1rem; margin-bottom: 15px;">Select Payment Method</h3>
+            <div class="payment-method selected" onclick="selectPayment(this)">
+                <input type="radio" name="payment" checked>
+                <div>
+                    <div class="fw-bold">UPI</div>
+                    <div class="text-muted" style="font-size: 0.8rem;">Google Pay, PhonePe, Paytm</div>
+                </div>
+            </div>
+            <div class="payment-method" onclick="selectPayment(this)">
+                <input type="radio" name="payment">
+                <div>
+                    <div class="fw-bold">Card</div>
+                    <div class="text-muted" style="font-size: 0.8rem;">Visa, MasterCard, RuPay</div>
+                </div>
+            </div>
+            <div class="payment-method" onclick="selectPayment(this)">
+                <input type="radio" name="payment">
+                <div>
+                    <div class="fw-bold">Net Banking</div>
+                    <div class="text-muted" style="font-size: 0.8rem;">All Indian Banks</div>
+                </div>
+            </div>
+        </div>
+
+        <div style="padding: 15px;">
+            <button class="btn btn-primary" onclick="processPayment()">Pay Now</button>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        let totalAmount = 0;
+        let trainData = null;
+        let passengersData = [];
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const trainNo = localStorage.getItem('selected_train');
+            passengersData = JSON.parse(localStorage.getItem('booking_passengers') || '[]');
+            
+            if(!trainNo || passengersData.length === 0) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/trains/${trainNo}`);
+                trainData = await response.json();
+                
+                const date = localStorage.getItem('search_date');
+                const cls = localStorage.getItem('selected_class') || 'SL';
+                
+                document.getElementById('summaryCard').innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h3 style="font-size: 1rem; margin: 0;">Journey Summary</h3>
+                        <a href="trains.html" style="font-size: 0.8rem; color: var(--primary-color);">Edit</a>
+                    </div>
+                    <div class="fw-bold">${trainData.source} → ${trainData.destination}</div>
+                    <div style="font-size: 0.85rem;" class="text-muted mb-2">
+                        ${new Date(date).toDateString()} | ${trainData.trainNumber} ${trainData.trainName}
+                    </div>
+                    <div style="font-size: 0.85rem;" class="text-muted mb-2">
+                        Class: ${cls} | Departure: ${trainData.departureTime} | Arrival: ${trainData.arrivalTime}
+                    </div>
+                    
+                    <hr style="border: none; border-top: 1px solid var(--border-color); margin: 15px 0;">
+                    
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h3 style="font-size: 1rem; margin: 0;">Passenger Summary</h3>
+                        <a href="passenger.html" style="font-size: 0.8rem; color: var(--primary-color);">Edit</a>
+                    </div>
+                    <div class="fw-bold">${passengersData.length} Passenger(s)</div>
+                `;
+
+                // Calculate fares
+                const baseRates = { "1A": 3200, "2A": 2290, "3A": 1540, "SL": 860 };
+                const baseFarePerPassenger = baseRates[cls] || 860;
+                const totalBase = baseFarePerPassenger * passengersData.length;
+                const reservation = 40;
+                const gst = Math.round(totalBase * 0.05);
+                totalAmount = totalBase + reservation + gst;
+
+                document.getElementById('baseFare').textContent = `₹ ${totalBase}`;
+                document.getElementById('gst').textContent = `₹ ${gst}`;
+                document.getElementById('totalFare').textContent = `₹ ${totalAmount}`;
+
+            } catch(e) {
+                console.error(e);
+                alert('Error loading payment details');
+            }
+        });
+
+        function selectPayment(element) {
+            document.querySelectorAll('.payment-method').forEach(el => el.classList.remove('selected'));
+            element.classList.add('selected');
+            element.querySelector('input').checked = true;
+        }
+
+        async function processPayment() {
+            document.getElementById('loaderOverlay').style.display = 'flex';
+            
+            // Simulate payment delay
+            setTimeout(async () => {
+                try {
+                    const bookingPayload = {
+                        train: trainData,
+                        passengers: passengersData,
+                        journeyDate: localStorage.getItem('search_date'),
+                        totalFare: totalAmount,
+                        trainClass: localStorage.getItem('selected_class')
+                    };
+
+                    const response = await fetch(`${API_BASE_URL}/bookings`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(bookingPayload)
+                    });
+
+                    if(response.ok) {
+                        const bookingResult = await response.json();
+                        localStorage.setItem('last_booking_pnr', bookingResult.pnr);
+                        window.location.href = 'confirmation.html';
+                    } else {
+                        alert("Booking failed. Please try again.");
+                        document.getElementById('loaderOverlay').style.display = 'none';
+                    }
+                } catch(e) {
+                    console.error(e);
+                    alert("Error communicating with server.");
+                    document.getElementById('loaderOverlay').style.display = 'none';
+                }
+            }, 2000); // 2 second mock delay
+        }
+    </script>
+</body>
+</html>

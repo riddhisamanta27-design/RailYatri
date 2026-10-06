@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RailYatri - Passenger Details</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .stepper {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px;
+            background: var(--secondary-color);
+            margin-bottom: 15px;
+            position: relative;
+        }
+        .step {
+            text-align: center;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            position: relative;
+            z-index: 2;
+            background: var(--secondary-color);
+            padding: 0 5px;
+        }
+        .step.active {
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+        .step-circle {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #eee;
+            margin: 0 auto 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .step.active .step-circle {
+            background: var(--primary-color);
+            color: white;
+        }
+        .stepper-line {
+            position: absolute;
+            top: 25px;
+            left: 30px;
+            right: 30px;
+            height: 2px;
+            background: #eee;
+            z-index: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <a href="javascript:history.back()" class="back-btn">←</a>
+            <h1>Passenger Details</h1>
+            <div style="width: 24px;"></div>
+        </header>
+
+        <div class="stepper">
+            <div class="stepper-line"></div>
+            <div class="step active">
+                <div class="step-circle">1</div>
+                Passenger
+            </div>
+            <div class="step">
+                <div class="step-circle">2</div>
+                Payment
+            </div>
+            <div class="step">
+                <div class="step-circle">3</div>
+                Confirm
+            </div>
+        </div>
+
+        <div class="card">
+            <h3 style="font-size: 1rem; margin-bottom: 15px;">Traveller Count</h3>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <div>Adults (12+ years)</div>
+                <div class="d-flex align-items-center">
+                    <button class="btn btn-outline" style="padding: 2px 10px; width: auto;" onclick="updateCount('adult', -1)">-</button>
+                    <span id="adultCount" style="margin: 0 15px;">1</span>
+                    <button class="btn btn-outline" style="padding: 2px 10px; width: auto;" onclick="updateCount('adult', 1)">+</button>
+                </div>
+            </div>
+            <div class="d-flex justify-content-between align-items-center">
+                <div>Children (5-11 years)</div>
+                <div class="d-flex align-items-center">
+                    <button class="btn btn-outline" style="padding: 2px 10px; width: auto;" onclick="updateCount('child', -1)">-</button>
+                    <span id="childCount" style="margin: 0 15px;">0</span>
+                    <button class="btn btn-outline" style="padding: 2px 10px; width: auto;" onclick="updateCount('child', 1)">+</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="passengersContainer">
+            <!-- Passenger forms injected here -->
+        </div>
+
+        <div style="padding: 15px;">
+            <button class="btn btn-primary" onclick="proceedToPayment()">Continue</button>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        let adults = 1;
+        let children = 0;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderPassengerForms();
+        });
+
+        function updateCount(type, delta) {
+            if (type === 'adult') {
+                adults = Math.max(1, adults + delta); // At least 1 adult required
+                document.getElementById('adultCount').textContent = adults;
+            } else {
+                children = Math.max(0, children + delta);
+                document.getElementById('childCount').textContent = children;
+            }
+            renderPassengerForms();
+        }
+
+        function renderPassengerForms() {
+            const container = document.getElementById('passengersContainer');
+            let html = '';
+            let pIndex = 1;
+
+            for(let i=0; i<adults; i++) {
+                html += createPassengerForm(pIndex++, 'Adult');
+            }
+            for(let i=0; i<children; i++) {
+                html += createPassengerForm(pIndex++, 'Child');
+            }
+
+            container.innerHTML = html;
+        }
+
+        function createPassengerForm(index, type) {
+            return `
+                <div class="card" id="passenger-form-${index}">
+                    <h3 style="font-size: 1rem; margin-bottom: 15px;">${index}. ${type}</h3>
+                    <div class="form-group">
+                        <label class="form-label">Full Name *</label>
+                        <input type="text" id="p_name_${index}" class="form-control" required>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <div class="form-group" style="width: 48%;">
+                            <label class="form-label">Age *</label>
+                            <input type="number" id="p_age_${index}" class="form-control" min="5" max="120" required>
+                        </div>
+                        <div class="form-group" style="width: 48%;">
+                            <label class="form-label">Gender *</label>
+                            <select id="p_gender_${index}" class="form-control">
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Transgender">Transgender</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <div class="form-group" style="width: 48%;">
+                            <label class="form-label">ID Proof *</label>
+                            <select id="p_idType_${index}" class="form-control">
+                                <option value="Aadhaar Card">Aadhaar Card</option>
+                                <option value="PAN Card">PAN Card</option>
+                                <option value="Passport">Passport</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="width: 48%;">
+                            <label class="form-label">ID Number *</label>
+                            <input type="text" id="p_idNumber_${index}" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <div class="form-group" style="width: 48%;">
+                            <label class="form-label">Class</label>
+                            <input type="text" id="p_class_${index}" class="form-control" readonly value="${localStorage.getItem('selected_class') || 'SL'}">
+                        </div>
+                        <div class="form-group" style="width: 48%;">
+                            <label class="form-label">Quota</label>
+                            <select id="p_quota_${index}" class="form-control">
+                                <option value="General">General</option>
+                                <option value="Senior Citizen">Senior Citizen</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function proceedToPayment() {
+            const passengers = [];
+            let isValid = true;
+            const totalPassengers = adults + children;
+
+            for(let i=1; i<=totalPassengers; i++) {
+                const name = document.getElementById(`p_name_${i}`).value.trim();
+                const age = document.getElementById(`p_age_${i}`).value;
+                const gender = document.getElementById(`p_gender_${i}`).value;
+                const idType = document.getElementById(`p_idType_${i}`).value;
+                const idNum = document.getElementById(`p_idNumber_${i}`).value.trim();
+                const cls = document.getElementById(`p_class_${i}`).value;
+                const quota = document.getElementById(`p_quota_${i}`).value;
+
+                if(!name || !age || !idNum) {
+                    alert(`Please fill all required fields for Passenger ${i}`);
+                    isValid = false;
+                    break;
+                }
+
+                passengers.push({
+                    name, age: parseInt(age), gender, idProofType: idType, 
+                    idProofNumber: idNum, classType: cls, quota
+                });
+            }
+
+            if(isValid) {
+                localStorage.setItem('booking_passengers', JSON.stringify(passengers));
+                window.location.href = 'payment.html';
+            }
+        }
+    </script>
+</body>
+</html>

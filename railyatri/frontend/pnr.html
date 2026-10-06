@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RailYatri - PNR Status</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <a href="index.html" class="back-btn">←</a>
+            <h1>PNR Status</h1>
+            <div style="width: 24px;"></div>
+        </header>
+
+        <div class="card" style="margin-top: 20px;">
+            <div class="form-group">
+                <label class="form-label">Enter PNR Number</label>
+                <input type="text" id="pnrInput" class="form-control" placeholder="10-digit PNR" maxlength="10">
+            </div>
+            <button class="btn btn-primary" onclick="checkPNR()">Check Status</button>
+        </div>
+
+        <div id="pnrResult" style="display: none; padding-bottom: 20px;">
+            <!-- Result loaded here via JS -->
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        async function checkPNR() {
+            const pnr = document.getElementById('pnrInput').value.trim();
+            if(!pnr || pnr.length !== 10) {
+                alert("Please enter a valid 10-digit PNR");
+                return;
+            }
+
+            const resultContainer = document.getElementById('pnrResult');
+            resultContainer.style.display = 'block';
+            resultContainer.innerHTML = '<div class="text-center text-muted mt-4">Fetching status...</div>';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/bookings/${pnr}`);
+                
+                if(!response.ok || response.status === 204) {
+                    // Sometimes 204 or empty response means not found depending on spring boot setup
+                    const text = await response.text();
+                    if (!text) throw new Error("Not found");
+                }
+                
+                const booking = await response.json();
+                
+                if(!booking || !booking.pnr) {
+                    throw new Error("Not found");
+                }
+
+                let passengersHtml = '';
+                booking.passengers.forEach((p, idx) => {
+                    let statusClass = p.status === 'CNF' ? 'text-success' : (p.status === 'CAN' ? 'text-danger' : 'text-warning');
+                    passengersHtml += `
+                        <div class="d-flex justify-content-between align-items-center mb-2" style="font-size: 0.9rem; padding-bottom: 5px; border-bottom: 1px solid #eee;">
+                            <div>${idx + 1}. ${p.name}</div>
+                            <div class="fw-bold ${statusClass}">
+                                ${p.status} ${p.seatNumber ? '| ' + p.seatNumber : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+
+                let overallStatusClass = booking.status === 'Confirmed' ? 'text-success' : (booking.status === 'Cancelled' ? 'text-danger' : 'text-warning');
+
+                resultContainer.innerHTML = `
+                    <div class="card">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="fw-bold" style="font-size: 1.1rem;">PNR : ${booking.pnr}</div>
+                            <div class="fw-bold ${overallStatusClass}" style="background: var(--bg-light); padding: 4px 10px; border-radius: 4px;">${booking.status}</div>
+                        </div>
+                        
+                        <div class="fw-bold">${booking.train.trainNumber}  ${booking.train.trainName}</div>
+                        <div style="font-size: 0.85rem;" class="text-muted mb-1">Journey Date: ${new Date(booking.journeyDate).toDateString()}</div>
+                        <div style="font-size: 0.85rem;" class="text-muted mb-3">Class: <span class="fw-bold">${booking.trainClass}</span> | Booking Probability: <span class="fw-bold">${booking.probabilityAtBooking}%</span></div>
+                        
+                        <h4 style="font-size: 0.95rem; margin-bottom: 10px;">Passenger Status</h4>
+                        ${passengersHtml}
+                        
+                        <h4 style="font-size: 0.95rem; margin-top: 15px; margin-bottom: 10px;">Train Information</h4>
+                        <div class="d-flex justify-content-between" style="font-size: 0.85rem;">
+                            <div>
+                                <div class="text-muted">Departure</div>
+                                <div class="fw-bold">${booking.train.departureTime}</div>
+                                <div class="text-muted mt-1">${booking.train.source}</div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div class="text-muted">Arrival</div>
+                                <div class="fw-bold">${booking.train.arrivalTime}</div>
+                                <div class="text-muted mt-1">${booking.train.destination}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+            } catch (error) {
+                console.error(error);
+                resultContainer.innerHTML = `
+                    <div class="card text-center">
+                        <div style="font-size: 2rem; margin-bottom: 10px;">❓</div>
+                        <h4 class="text-danger">PNR Not Found</h4>
+                        <p class="text-muted" style="font-size: 0.85rem;">Please check the number and try again.</p>
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RailYatri - Live Train Status</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .timeline { border-left: 2px dashed var(--border-color); margin-left: 20px; padding-left: 20px; margin-top: 20px; }
+        .timeline-item { position: relative; margin-bottom: 20px; }
+        .timeline-item::before {
+            content: ''; position: absolute; left: -26px; top: 2px;
+            width: 10px; height: 10px; border-radius: 50%;
+            background-color: var(--border-color);
+        }
+        .timeline-item.passed::before { background-color: var(--success-color); }
+        .timeline-item.current::before { background-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(11, 61, 145, 0.2); }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <a href="index.html" class="back-btn">←</a>
+            <h1>Live Train Status</h1>
+            <div style="width: 24px;"></div>
+        </header>
+
+        <div class="card" style="margin-top: 20px;">
+            <div class="form-group">
+                <input type="text" id="trainInput" class="form-control" placeholder="Train Number or Name (e.g. 12951)">
+            </div>
+            <button class="btn btn-primary" onclick="checkLiveStatus()">Check Status</button>
+        </div>
+
+        <div id="statusResult" style="display: none; padding-bottom: 20px;">
+            <!-- Result loaded here via JS -->
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        async function checkLiveStatus() {
+            const trainNo = document.getElementById('trainInput').value.trim();
+            if(!trainNo) {
+                alert("Enter train number"); return;
+            }
+
+            const resultContainer = document.getElementById('statusResult');
+            resultContainer.style.display = 'block';
+            resultContainer.innerHTML = '<div class="text-center text-muted mt-4">Fetching status...</div>';
+
+            try {
+                // Fetch train details to get the schedule
+                const response = await fetch(`${API_BASE_URL}/trains/${trainNo}`);
+                const train = await response.json();
+                
+                if(!train || !train.trainNumber) {
+                    throw new Error("Train not found");
+                }
+
+                // Simulate Live Status based on API response
+                const statusResp = await fetch(`${API_BASE_URL}/trains/${trainNo}/status`);
+                const statusInfo = await statusResp.json();
+
+                let scheduleHtml = '';
+                let foundCurrent = false;
+
+                train.schedule.forEach((st) => {
+                    let itemClass = 'timeline-item';
+                    if (statusInfo.currentStation.includes(st.code) || statusInfo.currentStation.includes(st.name)) {
+                        itemClass += ' current';
+                        foundCurrent = true;
+                    } else if (!foundCurrent) {
+                        itemClass += ' passed';
+                    }
+
+                    scheduleHtml += `
+                        <div class="${itemClass}">
+                            <div class="fw-bold" style="font-size: 0.9rem;">${st.name} (${st.code})</div>
+                            <div class="text-muted" style="font-size: 0.8rem;">Arr: ${st.arrivalTime} | Dep: ${st.departureTime}</div>
+                        </div>
+                    `;
+                });
+
+                resultContainer.innerHTML = `
+                    <div class="card">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="fw-bold" style="font-size: 1.1rem;">${train.trainNumber}</div>
+                            <div class="text-success fw-bold" style="font-size: 0.85rem;">🟢 ${statusInfo.status}</div>
+                        </div>
+                        <div class="fw-bold mb-2">${train.trainName}</div>
+                        <div class="text-muted" style="font-size: 0.85rem;">${train.source} → ${train.destination}</div>
+                        
+                        <div class="d-flex justify-content-between mt-3 mb-2" style="background: var(--bg-light); padding: 10px; border-radius: 8px;">
+                            <div class="text-center">
+                                <div class="text-muted" style="font-size: 0.75rem;">Delay</div>
+                                <div class="fw-bold text-success">${statusInfo.delay}</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-muted" style="font-size: 0.75rem;">Expected Arrival</div>
+                                <div class="fw-bold text-success">${train.arrivalTime}</div>
+                            </div>
+                        </div>
+
+                        <div class="timeline">
+                            ${scheduleHtml}
+                        </div>
+                    </div>
+                `;
+
+            } catch (error) {
+                resultContainer.innerHTML = `
+                    <div class="card text-center text-danger">Train not found. Try 12951 or 12903.</div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

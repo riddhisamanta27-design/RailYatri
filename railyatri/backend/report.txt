@@ -1,0 +1,17 @@
+Direct train search: PASS
+Multiple train results: PASS
+Train details: FAIL
+Class-wise seat availability: PASS
+Booking probability: PASS
+Passenger booking: PASS
+Seat count decreasing after booking: PASS
+PNR generation: PASS
+PNR lookup: PASS
+My Bookings: PASS
+Ticket cancellation: PASS
+Ticket status updated to Cancelled: PASS
+RAC probability: PASS
+Waiting-list probability: PASS
+Connecting route suggestions: PASS
+Live train status: PASS
+Train schedule: PASS

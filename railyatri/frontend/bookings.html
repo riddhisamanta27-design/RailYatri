@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RailYatri - My Bookings</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .tabs { display: flex; background: var(--primary-color); padding: 0 15px; }
+        .tab { padding: 12px 15px; color: rgba(255,255,255,0.7); font-size: 0.9rem; font-weight: 500; cursor: pointer; border-bottom: 3px solid transparent; }
+        .tab.active { color: white; border-bottom-color: var(--accent-color); }
+        .status-badge { font-size: 0.7rem; padding: 4px 8px; border-radius: 4px; }
+        .status-badge.confirmed { background: #d4edda; color: var(--success-color); }
+        .status-badge.cancelled { background: #f8d7da; color: var(--danger-color); }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header" style="padding-bottom: 0;">
+            <div class="d-flex align-items-center mb-3">
+                <a href="index.html" class="back-btn">←</a>
+                <h1 style="margin-left: 15px;">My Bookings</h1>
+            </div>
+        </header>
+        
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('Upcoming', this)">Upcoming</div>
+            <div class="tab" onclick="switchTab('Completed', this)">Completed</div>
+            <div class="tab" onclick="switchTab('Cancelled', this)">Cancelled</div>
+        </div>
+
+        <div id="bookingsContainer" style="padding-bottom: 80px;">
+            <div class="text-center mt-4 text-muted">Loading bookings...</div>
+        </div>
+
+        <!-- Bottom Navigation -->
+        <div class="bottom-nav">
+            <a href="index.html" class="nav-item"><span>🏠</span>Home</a>
+            <a href="bookings.html" class="nav-item active"><span>📅</span>My Bookings</a>
+            <a href="profile.html" class="nav-item"><span>👤</span>Profile</a>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        let allBookings = [];
+
+        document.addEventListener('DOMContentLoaded', fetchBookings);
+
+        async function fetchBookings() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/bookings`);
+                allBookings = await response.json();
+                renderBookings('Upcoming');
+            } catch(e) {
+                console.error(e);
+                document.getElementById('bookingsContainer').innerHTML = '<div class="card text-center text-danger">Failed to load bookings</div>';
+            }
+        }
+
+        function switchTab(status, element) {
+            document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
+            renderBookings(status);
+        }
+
+        function renderBookings(tabFilter) {
+            const container = document.getElementById('bookingsContainer');
+            
+            // Simple filter logic for demo
+            let filtered = allBookings;
+            if(tabFilter === 'Upcoming') {
+                filtered = allBookings.filter(b => b.status === 'Confirmed' || b.status === 'RAC' || b.status === 'Waiting List');
+            } else if (tabFilter === 'Cancelled') {
+                filtered = allBookings.filter(b => b.status === 'Cancelled');
+            } else {
+                filtered = []; // No completed bookings for demo
+            }
+
+            if(filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center mt-5">
+                        <div style="font-size: 3rem; color: #ccc; margin-bottom: 10px;">📅</div>
+                        <p class="text-muted">No ${tabFilter} bookings found.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            filtered.forEach(b => {
+                let badgeClass = b.status === 'Confirmed' ? 'confirmed' : (b.status === 'Cancelled' ? 'cancelled' : 'text-warning');
+                let cancelBtn = b.status !== 'Cancelled' ? `<button class="btn btn-outline" style="width: 48%; padding: 8px; border-color: var(--danger-color); color: var(--danger-color);" onclick="cancelBooking('${b.pnr}')">Cancel Ticket</button>` : '';
+                
+                html += `
+                    <div class="card">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="fw-bold">PNR: ${b.pnr}</div>
+                            <div class="status-badge ${badgeClass}">${b.status}</div>
+                        </div>
+                        <div class="fw-bold" style="font-size: 0.9rem;">${b.train.trainNumber} ${b.train.trainName}</div>
+                        <div class="text-muted mb-3" style="font-size: 0.85rem;">${b.train.source} → ${b.train.destination}</div>
+                        
+                        <div class="d-flex justify-content-between text-muted" style="font-size: 0.8rem; margin-bottom: 5px;">
+                            <div>${new Date(b.journeyDate).toDateString()}</div>
+                            <div>Class: <span class="fw-bold">${b.trainClass}</span></div>
+                        </div>
+                        <div class="d-flex justify-content-between text-muted" style="font-size: 0.8rem; margin-bottom: 15px;">
+                            <div>${b.passengers.length} Passenger(s) | Status: ${b.status}</div>
+                            <div style="text-align: right;">Probability: <span class="fw-bold">${b.probabilityAtBooking}%</span></div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <button class="btn btn-outline" style="width: ${b.status !== 'Cancelled' ? '48%' : '100%'}; padding: 8px;" onclick="viewTicket('${b.pnr}')">View Ticket</button>
+                            ${cancelBtn}
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function viewTicket(pnr) {
+            localStorage.setItem('last_booking_pnr', pnr);
+            window.location.href = 'confirmation.html';
+        }
+
+        async function cancelBooking(pnr) {
+            if(confirm('Are you sure you want to cancel this ticket?')) {
+                try {
+                    await fetch(`${API_BASE_URL}/bookings/${pnr}`, { method: 'DELETE' });
+                    fetchBookings(); // Refresh list
+                } catch(e) {
+                    alert('Error cancelling booking');
+                }
+            }
+        }
+    </script>
+</body>
+</html>
