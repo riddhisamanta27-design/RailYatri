@@ -19,5 +19,5 @@ COPY --from=build /app/target/*.jar app.jar
 # Expose the port (Render sets the PORT environment variable)
 EXPOSE ${PORT:-8081}
 
-# Start the application, binding to the Render PORT if available, otherwise defaulting to 8081
-ENTRYPOINT ["sh", "-c", "java -jar app.jar --server.port=${PORT:-8081}"]
+# Start the application, binding to the Render PORT if available, otherwise defaulting to 10000
+ENTRYPOINT ["sh", "-c", "java -jar app.jar --server.port=${PORT:-10000} --server.address=0.0.0.0"]
